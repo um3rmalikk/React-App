@@ -1,0 +1,4 @@
+/* Using Tailwind via CDN (no build): keep minimal resets so CDN utilities work */
+html, body, #root { height: 100%; }
+* { box-sizing: border-box; }
+body { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }

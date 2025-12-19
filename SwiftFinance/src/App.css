@@ -1,0 +1,10 @@
+/* App-specific styles moved to Tailwind utility classes. Keep this file minimal. */
+
+/* fallback keyframes for fade-in used by .page if desired */
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+.page { animation: fadeIn 600ms ease forwards }
+.newColor {
+  background-color: aliceblue;
+  color: rgb(255, 0, 0);
+
+}
