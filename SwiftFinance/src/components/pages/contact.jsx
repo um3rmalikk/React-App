@@ -1,8 +1,6 @@
 import { useState } from "react";
-// Removed Firebase imports (collection, addDoc, db)
 
 const Contact = () => {
-  // 1. Initialize State for Form Fields
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -11,7 +9,6 @@ const Contact = () => {
     message: "",
   });
 
-  // 2. Handle Input Changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -20,16 +17,10 @@ const Contact = () => {
     }));
   };
 
-  // 3. Handle Form Submission (Static Only)
   const handleSubmit = (e) => {
     e.preventDefault(); 
-    
-    // Just log to console instead of sending to Firebase
     console.log("Form Data Submitted (Static):", formData);
-    
     alert("Thank you! Your message has been sent (Simulation).");
-    
-    // Optional: Reset form after submit
     setFormData({
       fullName: "",
       email: "",
@@ -40,13 +31,17 @@ const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8 flex justify-center items-start">
+    // FIXED: Removed 'bg-gray-900'. Now it matches the Dashboard/Home theme.
+    <div className="min-h-screen w-full p-8 flex justify-center items-start text-white">
+      
+      {/* Form Card */}
       <div className="w-full max-w-lg bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
         <h2 className="text-3xl text-emerald-400 font-bold mb-6 text-center">
           Contact Support
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
           {/* Full Name */}
           <div>
             <label className="block text-gray-300 mb-1">Full Name</label>
@@ -55,7 +50,7 @@ const Contact = () => {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition"
+              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition text-white"
               placeholder="John Doe"
               required
             />
@@ -69,7 +64,7 @@ const Contact = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition"
+              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition text-white"
               placeholder="john@example.com"
               required
             />
@@ -85,7 +80,7 @@ const Contact = () => {
               name="accountId"
               value={formData.accountId}
               onChange={handleChange}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition"
+              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition text-white"
               placeholder="e.g., ACC-12345"
             />
           </div>
@@ -97,7 +92,7 @@ const Contact = () => {
               name="inquiryType"
               value={formData.inquiryType}
               onChange={handleChange}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition"
+              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition text-white"
             >
               <option>General Support</option>
               <option>Billing Issue</option>
@@ -114,7 +109,7 @@ const Contact = () => {
               value={formData.message}
               onChange={handleChange}
               rows="4"
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition"
+              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-emerald-500 outline-none transition text-white"
               placeholder="How can we help you?"
               required
             ></textarea>
@@ -123,7 +118,7 @@ const Contact = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded transition duration-200"
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded transition duration-200 shadow-lg"
           >
             Submit Request
           </button>

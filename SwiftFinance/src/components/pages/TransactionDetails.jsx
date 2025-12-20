@@ -80,7 +80,10 @@ const TransactionDetails = () => {
   if (!transaction) return <div className="p-10 text-center text-white">Transaction not found!</div>;
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6 flex justify-center items-start pt-12">
+    // FIXED: Removed 'bg-gray-900'. Added 'w-full' to ensure it fills the space correctly.
+    <div className="min-h-screen w-full p-6 flex justify-center items-start pt-12 text-white">
+      
+      {/* Card Container (Kept bg-gray-800 to stand out) */}
       <div className="w-full max-w-2xl bg-gray-800 rounded-2xl border border-gray-700 shadow-2xl overflow-hidden">
         
         {/* Color Bar based on Income/Expense */}

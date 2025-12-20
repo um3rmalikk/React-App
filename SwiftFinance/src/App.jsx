@@ -16,7 +16,6 @@ import Budgets from './components/pages/budgets'
 import Goals from './components/pages/goals'
 import Support from './components/pages/support'
 
-import ContactDetails from './components/pages/ContactDetails'
 import AddTransaction from './components/pages/AddTransaction'
 // 1. IMPORT THE NEW DETAILS PAGE
 import TransactionDetails from './components/pages/TransactionDetails'
@@ -32,8 +31,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
 
-            {/* Support/Contact Details */}
-            <Route path="/inquiry/:id" element={<ContactDetails />} />
+           
             
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/accounts" element={<Accounts />} />

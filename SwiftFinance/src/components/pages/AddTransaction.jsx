@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-// Import Firestore functions including 'updateDoc' and 'increment'
 import { collection, addDoc, getDocs, doc, updateDoc, increment } from 'firebase/firestore'
 import { db } from '../../../firebase/config'
 
 const AddTransaction = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  
-  // State for Account Selection
   const [accounts, setAccounts] = useState([])
 
   const [formData, setFormData] = useState({
@@ -17,16 +14,15 @@ const AddTransaction = () => {
     category: 'Expense',
     date: new Date().toISOString().split('T')[0],
     note: '',
-    accountId: '' // New field to link transaction to an account
+    accountId: '' 
   })
 
-  // 1. Fetch Accounts for the Dropdown
+  // 1. Fetch Accounts
   useEffect(() => {
     const fetchAccounts = async () => {
         const snapshot = await getDocs(collection(db, "accounts"))
         const list = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }))
         setAccounts(list)
-        // Default to first account if exists
         if(list.length > 0) {
             setFormData(prev => ({ ...prev, accountId: list[0].id }))
         }
@@ -40,19 +36,17 @@ const AddTransaction = () => {
 
     try {
       const val = parseFloat(formData.amount)
-      
-      // Determine if money is leaving (-) or entering (+) the account
       // Expense = Subtract, Income = Add
       const adjustment = formData.category === 'Income' ? val : -val
 
-      // 1. Create Transaction Document
+      // 1. Create Transaction
       await addDoc(collection(db, "transactions"), {
         ...formData,
-        amount: val, // Store absolute value
+        amount: val, 
         createdAt: new Date()
       })
 
-      // 2. Update the Balance of the selected Account
+      // 2. Update Account Balance
       if (formData.accountId) {
           const accountRef = doc(db, "accounts", formData.accountId)
           await updateDoc(accountRef, {
@@ -71,7 +65,10 @@ const AddTransaction = () => {
   }
 
   return (
-    <div className="p-8 bg-gray-900 min-h-screen text-white flex justify-center items-center">
+    // FIXED: Removed 'bg-gray-900'. Now it is transparent and fits the main layout.
+    <div className="p-8 w-full min-h-screen text-white flex justify-center items-center">
+      
+      {/* Form Card (Kept bg-gray-800 to match other cards) */}
       <div className="w-full max-w-lg bg-gray-800 p-8 rounded-xl border border-gray-700 shadow-2xl">
         <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-emerald-400">Add New Transaction</h2>
@@ -80,7 +77,7 @@ const AddTransaction = () => {
         
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Account Selection (NEW) */}
+          {/* Account Selection */}
           <div>
             <label className="block text-gray-400 text-xs uppercase font-bold mb-2">Select Account</label>
             <select 
