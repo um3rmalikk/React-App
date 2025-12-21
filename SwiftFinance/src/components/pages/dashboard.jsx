@@ -1,63 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../../../firebase/config'
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    balance: 0,
-    income: 50000, // Default Base as requested
-    expenses: 30000 // Default Base as requested
+  // --- STATIC DATA (Hardcoded) ---
+  // Matches the sum of accounts from the Accounts page (155k + 250k + 45k + 5k = 455k)
+  const [stats] = useState({
+    balance: 455000, 
+    income: 12000,   // Mock monthly income
+    expenses: 4500   // Mock monthly expense
   })
-  const [recentTransactions, setRecentTransactions] = useState([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // 1. Fetch Accounts to calculate REAL Total Balance
-        const accSnapshot = await getDocs(collection(db, "accounts"))
-        let totalBalance = 0
-        accSnapshot.docs.forEach(doc => {
-            totalBalance += parseFloat(doc.data().balance || 0)
-        })
-
-        // 2. Fetch Transactions for Activity & Dynamic Income/Expense
-        const txSnapshot = await getDocs(collection(db, "transactions"))
-        const docs = txSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-
-        // Sort by Date (Newest First)
-        docs.sort((a, b) => new Date(b.date) - new Date(a.date))
-
-        // Calculate Stats (Base + Transaction Sums)
-        let addedIncome = 0
-        let addedExpenses = 0
-        docs.forEach(t => {
-            const val = parseFloat(t.amount)
-            if (t.category === 'Income') addedIncome += val
-            else addedExpenses += val
-        })
-
-        // 3. Update State
-        setStats({
-          balance: totalBalance, // Real sum of accounts
-          income: 50000 + addedIncome,
-          expenses: 30000 + addedExpenses
-        })
-        
-        setRecentTransactions(docs.slice(0, 5))
-
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchDashboardData()
-  }, [])
-
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading Dashboard...</div>
+  // Mock Recent Transactions
+  const [recentTransactions] = useState([
+    { id: 1, title: 'Freelance Payment', date: '2025-12-20', amount: 1200, category: 'Income' },
+    { id: 2, title: 'Grocery Shopping', date: '2025-12-19', amount: 150.50, category: 'Expense' },
+    { id: 3, title: 'Monthly Rent', date: '2025-12-01', amount: 1200, category: 'Expense' },
+    { id: 4, title: 'Stock Dividend', date: '2025-11-28', amount: 450, category: 'Income' },
+    { id: 5, title: 'Gym Membership', date: '2025-11-25', amount: 60, category: 'Expense' }
+  ])
 
   return (
     <div className="p-6 w-full">

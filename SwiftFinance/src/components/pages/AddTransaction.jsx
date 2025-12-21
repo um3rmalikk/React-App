@@ -1,156 +1,149 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { collection, addDoc, getDocs, doc, updateDoc, increment } from 'firebase/firestore'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../../../firebase/config'
 
 const AddTransaction = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  const [accounts, setAccounts] = useState([])
 
-  const [formData, setFormData] = useState({
-    title: '',
-    amount: '',
-    category: 'Expense',
-    date: new Date().toISOString().split('T')[0],
-    note: '',
-    accountId: '' 
-  })
-
-  // 1. Fetch Accounts
-  useEffect(() => {
-    const fetchAccounts = async () => {
-        const snapshot = await getDocs(collection(db, "accounts"))
-        const list = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }))
-        setAccounts(list)
-        if(list.length > 0) {
-            setFormData(prev => ({ ...prev, accountId: list[0].id }))
-        }
-    }
-    fetchAccounts()
-  }, [])
+  // Form States
+  const [title, setTitle] = useState('')
+  const [amount, setAmount] = useState('')
+  const [date, setDate] = useState('')
+  const [category, setCategory] = useState('Expense')
+  const [account, setAccount] = useState('Main Capital') // Restored "Account" state
+  const [note, setNote] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const val = parseFloat(formData.amount)
-      // Expense = Subtract, Income = Add
-      const adjustment = formData.category === 'Income' ? val : -val
-
-      // 1. Create Transaction
       await addDoc(collection(db, "transactions"), {
-        ...formData,
-        amount: val, 
+        title,
+        amount: parseFloat(amount),
+        date,
+        category,
+        account, // Saving the account name directly
+        note,
         createdAt: new Date()
       })
 
-      // 2. Update Account Balance
-      if (formData.accountId) {
-          const accountRef = doc(db, "accounts", formData.accountId)
-          await updateDoc(accountRef, {
-              balance: increment(adjustment)
-          })
-      }
+      navigate('/transactions')
       
-      alert("Transaction Added & Balance Updated!")
-      navigate('/transactions') 
     } catch (error) {
-      console.error("Error: ", error)
-      alert("Error saving transaction.")
+      console.error("Error adding transaction:", error)
+      alert("Failed to add transaction.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    // FIXED: Removed 'bg-gray-900'. Now it is transparent and fits the main layout.
-    <div className="p-8 w-full min-h-screen text-white flex justify-center items-center">
-      
-      {/* Form Card (Kept bg-gray-800 to match other cards) */}
-      <div className="w-full max-w-lg bg-gray-800 p-8 rounded-xl border border-gray-700 shadow-2xl">
-        <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-emerald-400">Add New Transaction</h2>
-            <Link to="/transactions" className="text-gray-400 hover:text-white">✕ Cancel</Link>
-        </div>
+    <div className="min-h-screen bg-gray-900 flex justify-center items-center p-6">
+      <div className="bg-gray-800 p-8 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-lg">
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-emerald-400">Add New Transaction</h2>
+          <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-white">✕ Cancel</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* Account Selection */}
+          {/* 1. SELECT ACCOUNT (Restored Hardcoded Dropdown) */}
           <div>
-            <label className="block text-gray-400 text-xs uppercase font-bold mb-2">Select Account</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Select Account</label>
             <select 
-              className="w-full bg-gray-900 rounded p-3 text-white border border-gray-600 focus:border-emerald-500 outline-none"
-              onChange={(e) => setFormData({...formData, accountId: e.target.value})}
-              value={formData.accountId}
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none transition"
+              value={account}
+              onChange={(e) => setAccount(e.target.value)}
             >
-                {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.name}</option>
-                ))}
+              <option value="Main Capital">Main Capital</option>
+              <option value="Personal Savings">Personal Savings</option>
+              <option value="Business Account">Business Account</option>
+              <option value="Cash Wallet">Cash Wallet</option>
             </select>
           </div>
 
+          {/* 2. TITLE */}
           <div>
-            <label className="block text-gray-400 text-xs uppercase font-bold mb-2">Title</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Title</label>
             <input 
               required
               type="text" 
               placeholder="e.g. Grocery Shopping"
-              className="w-full bg-gray-900 rounded p-3 text-white border border-gray-600 focus:border-emerald-500 outline-none"
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none transition"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
+          {/* 3. AMOUNT & DATE */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-gray-400 text-xs uppercase font-bold mb-2">Amount ($)</label>
-                <input 
-                  required
-                  type="number" 
-                  step="0.01"
-                  placeholder="0.00"
-                  className="w-full bg-gray-900 rounded p-3 text-white border border-gray-600 focus:border-emerald-500 outline-none"
-                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                />
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Amount ($)</label>
+              <input 
+                required
+                type="number" 
+                placeholder="0.00"
+                className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none transition"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
             </div>
             <div>
-                <label className="block text-gray-400 text-xs uppercase font-bold mb-2">Date</label>
-                <input 
-                  required
-                  type="date" 
-                  value={formData.date}
-                  className="w-full bg-gray-900 rounded p-3 text-white border border-gray-600 focus:border-emerald-500 outline-none"
-                  onChange={(e) => setFormData({...formData, date: e.target.value})}
-                />
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Date</label>
+              <input 
+                required
+                type="date" 
+                className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none transition"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
             </div>
           </div>
 
+          {/* 4. CATEGORY */}
           <div>
-            <label className="block text-gray-400 text-xs uppercase font-bold mb-2">Category</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Category</label>
             <select 
-              className="w-full bg-gray-900 rounded p-3 text-white border border-gray-600 focus:border-emerald-500 outline-none"
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none transition"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
             >
-                <option value="Expense">Expense</option>
-                <option value="Income">Income</option>
-                <option value="Savings">Savings</option>
-                <option value="Investment">Investment</option>
+              <option value="Expense">Expense</option>
+              <option value="Income">Income</option>
+              <option value="Savings">Savings</option>
+              <option value="Investment">Investment</option>
             </select>
           </div>
 
+          {/* 5. NOTE (Optional) */}
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Note (Optional)</label>
+            <textarea 
+              rows="3"
+              placeholder="Add details..."
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none transition"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+
+          {/* SUBMIT BUTTON */}
           <button 
-            type="submit"
+            type="submit" 
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg font-bold transition-all mt-4 shadow-lg shadow-emerald-900/50"
+            className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg transform active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Processing..." : "Save Transaction"}
+            {loading ? "Saving..." : "Save Transaction"}
           </button>
+
         </form>
       </div>
     </div>
   )
 }
 
-export default AddTransaction 
- 
+export default AddTransaction
