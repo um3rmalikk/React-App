@@ -5,12 +5,14 @@ import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from './firebase/config'
 
 // Import Components
-import Navbar from './components/layouts/navbar'
-import PrivateNavbar from './components/layouts/PrivateNavbar' // 👈 IMPORT THIS
+import Navbar from './components/layouts/navbar' // ✅ Matches navbar.jsx
+import PrivateNavbar from './components/layouts/PrivateNavbar' // ✅ Matches PrivateNavbar.jsx
 
 // Import Pages (Public)
-import SignIn from './components/pages/SignIn'
-import SignUp from './components/pages/SignUp'
+// 👇 FIXED: Changed to lowercase to match 'signin.jsx' and 'signup.jsx'
+import SignIn from './components/pages/signin' 
+import SignUp from './components/pages/signup' 
+
 import Home from './components/pages/home'
 import About from './components/pages/about'
 import Contact from './components/pages/contact'
@@ -18,17 +20,19 @@ import Contact from './components/pages/contact'
 // Import Pages (Private - User)
 import Dashboard from './components/pages/dashboard'
 import Accounts from './components/pages/accounts'
-import AddTransaction from './components/pages/AddTransaction'
+import AddTransaction from './components/pages/AddTransaction' // ✅ Matches AddTransaction.jsx
 import Transactions from './components/pages/transactions' 
 import Budgets from './components/pages/budgets'
 import Goals from './components/pages/goals'
 import Support from './components/pages/support'
 import Analytics from './components/pages/analytics'
-import TransactionDetails from './components/pages/TransactionDetails'
+import TransactionDetails from './components/pages/TransactionDetails' // ✅ Matches TransactionDetails.jsx
 
 // Import Pages (Private - Admin)
-import Users from './components/pages/admin/Users'
-import UserDetails from './components/pages/admin/UserDetails'
+// ⚠️ Note: I cannot see inside the 'admin' folder in your screenshot. 
+// If deployment fails on these, rename the files in the admin folder to match these imports.
+import Users from './components/pages/admin/Users' 
+import UserDetails from './components/pages/admin/UserDetails' 
 
 // --- THE BOUNCER (Protected Route Component) ---
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -67,7 +71,6 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 function App() {
   const location = useLocation();
 
-  // List of paths where we want the PRIVATE navbar (User/Admin Dashboard)
   const privateRoutes = [
     '/dashboard', 
     '/transactions', 
@@ -82,13 +85,11 @@ function App() {
     '/admin/user/'     
   ];
   
-  // Logic: If current URL matches a private route, show PrivateNavbar. Otherwise, show Public Navbar.
   const isPrivatePage = privateRoutes.some(route => location.pathname.startsWith(route));
 
   return (
       <div className="bg-gray-900 min-h-screen text-white font-sans selection:bg-emerald-500/30">
         
-        {/* 👇 SWAPPING LOGIC: Show proper header based on page type */}
         {isPrivatePage ? <PrivateNavbar /> : <Navbar />}
 
         <Routes>
