@@ -1,223 +1,223 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { auth, db, googleProvider } from '../../firebase/config'
 
 const SignUp = () => {
+  // Form State
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    agreeTerms: false,
+    confirmPassword: ''
   })
-  const [errors, setErrors] = useState({})
+  
+  // UI State
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
   const navigate = useNavigate()
 
+  // --- ICONS ---
+  const EyeOpen = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+  const EyeClosed = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
-    setErrors(prev => ({ ...prev, [name]: '' }))
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+    setError('')
   }
 
-  // Calculate Password Strength
-  const passwordStrength = useMemo(() => {
-    const pwd = formData.password || ''
-    if (pwd.length >= 12 && /[A-Z]/.test(pwd) && /\d/.test(pwd)) return 'Strong'
-    if (pwd.length >= 8) return 'Medium'
-    if (pwd.length > 0) return 'Weak'
-    return ''
-  }, [formData.password])
-
-  // Get color for strength text
-  const getStrengthColor = (strength) => {
-    if (strength === 'Strong') return 'text-emerald-400'
-    if (strength === 'Medium') return 'text-yellow-400'
-    return 'text-red-400'
-  }
-
-  const validateForm = () => {
-    const newErrors = {}
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required'
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required'
-    if (!formData.email.includes('@')) newErrors.email = 'Enter a valid email'
-    if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
-    if (!formData.agreeTerms) newErrors.agreeTerms = 'You must agree to terms'
-    return newErrors
-  }
-
-  const handleSubmit = (e) => {
+  // --- 1. EMAIL/PASSWORD SIGN UP ---
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const newErrors = validateForm()
+    
+    // Basic Validation
+    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+      setError('Please fill in all fields.')
+      return
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+    if (formData.password.length < 6) {
+      setError('Password should be at least 6 characters.')
+      return
+    }
 
-    if (Object.keys(newErrors).length === 0) {
-      setLoading(true)
-      setTimeout(() => {
-        localStorage.setItem('auth_token', 'demo_token_' + Date.now())
-        setLoading(false)
-        navigate('/')
-      }, 1500)
-    } else {
-      setErrors(newErrors)
+    setLoading(true)
+    try {
+      // A. Create Auth User
+      const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password)
+      const user = result.user
+
+      // B. Save to Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: formData.name,
+        email: formData.email,
+        role: "user", // Default role
+        createdAt: new Date().toISOString()
+      })
+
+      // C. Redirect to Transactions (Landing Page)
+      navigate('/transactions')
+
+    } catch (err) {
+      console.error("Signup Error:", err)
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Email is already registered. Try logging in.')
+      } else {
+        setError('Failed to create account. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // --- 2. GOOGLE SIGN UP ---
+  const handleGoogleSignUp = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider)
+      const user = result.user
+
+      // Check if user already exists
+      const userDoc = await getDoc(doc(db, "users", user.uid))
+      
+      if (!userDoc.exists()) {
+        // If new, save to Firestore
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
+          role: "user",
+          createdAt: new Date().toISOString()
+        })
+      }
+      
+      navigate('/transactions')
+    } catch (err) {
+      console.error("Google Sign-Up Error:", err)
+      setError("Google Sign-In failed.")
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-700">
+      <div className="w-full max-w-md bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
         
-        {/* --- Left Side: Branding & Benefits (Hidden on Mobile) --- */}
-        <div className="hidden md:flex w-1/2 bg-gradient-to-br from-emerald-900/40 to-gray-900 p-10 flex-col justify-center relative">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-          
-          <h2 className="text-3xl font-bold text-emerald-400 mb-6 z-10">Join SwiftFinance</h2>
-          <p className="text-gray-300 text-lg mb-8 z-10">
-            Create your account to start tracking accounts, recording transactions, and getting quick financial insights.
-          </p>
-          
-          <div className="z-10 bg-gray-800/50 p-6 rounded-xl border border-gray-700 backdrop-blur-sm">
-            <strong className="text-white block mb-4 text-lg">Why join us?</strong>
-            <ul className="space-y-3 text-gray-400">
-              <li className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">✓</div>
-                Smart Budget Tracking
-              </li>
-              <li className="flex items-center gap-3">
-                 <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">✓</div>
-                 Secure Data Encryption
-              </li>
-              <li className="flex items-center gap-3">
-                 <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">✓</div>
-                 Visual Analytics
-              </li>
-            </ul>
-          </div>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
+          <p className="text-gray-400 text-sm">Join SwiftFinance today</p>
         </div>
 
-        {/* --- Right Side: Sign Up Form --- */}
-        <div className="w-full md:w-1/2 p-8 md:p-12">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-white mb-2">Create Account</h1>
-            <p className="text-gray-400 text-sm">Start your financial journey today</p>
+        {error && (
+          <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 rounded text-red-400 text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          
+          {/* Name */}
+          <div>
+            <label className="block text-gray-300 text-xs font-medium mb-1">Full Name</label>
+            <input 
+              name="name" 
+              type="text"
+              value={formData.name} 
+              onChange={handleChange} 
+              className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-emerald-500 transition"
+              placeholder="John Doe"
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            
-            {/* Name Row */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <label className="block text-gray-300 text-xs font-medium mb-1">First Name</label>
-                <input 
-                  name="firstName" 
-                  value={formData.firstName} 
-                  onChange={handleChange} 
-                  placeholder="John" 
-                  className={`w-full p-3 rounded-lg bg-gray-700 border ${errors.firstName ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition`} 
-                />
-                {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName}</p>}
-              </div>
+          {/* Email */}
+          <div>
+            <label className="block text-gray-300 text-xs font-medium mb-1">Email Address</label>
+            <input 
+              name="email" 
+              type="email"
+              value={formData.email} 
+              onChange={handleChange} 
+              className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-emerald-500 transition"
+              placeholder="you@company.com"
+            />
+          </div>
 
-              <div className="flex-1">
-                <label className="block text-gray-300 text-xs font-medium mb-1">Last Name</label>
-                <input 
-                  name="lastName" 
-                  value={formData.lastName} 
-                  onChange={handleChange} 
-                  placeholder="Doe" 
-                  className={`w-full p-3 rounded-lg bg-gray-700 border ${errors.lastName ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition`} 
-                />
-                {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName}</p>}
-              </div>
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-gray-300 text-xs font-medium mb-1">Email Address</label>
-              <input 
-                name="email" 
-                value={formData.email} 
-                onChange={handleChange} 
-                placeholder="you@company.com" 
-                className={`w-full p-3 rounded-lg bg-gray-700 border ${errors.email ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition`} 
-              />
-              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-gray-300 text-xs font-medium mb-1">Password</label>
+          {/* Password */}
+          <div>
+            <label className="block text-gray-300 text-xs font-medium mb-1">Password</label>
+            <div className="relative">
               <input 
                 name="password" 
-                type="password" 
+                type={showPassword ? "text" : "password"} 
                 value={formData.password} 
                 onChange={handleChange} 
-                placeholder="Create a password" 
-                className={`w-full p-3 rounded-lg bg-gray-700 border ${errors.password ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition`} 
+                className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-emerald-500 transition pr-10"
+                placeholder="••••••••"
               />
-              <div className="flex justify-between mt-1">
-                 {errors.password && <p className="text-red-400 text-xs">{errors.password}</p>}
-                 {passwordStrength && (
-                   <p className={`text-xs ml-auto ${getStrengthColor(passwordStrength)}`}>
-                     Strength: {passwordStrength}
-                   </p>
-                 )}
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+              >
+                {showPassword ? EyeOpen : EyeClosed}
+              </button>
             </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-gray-300 text-xs font-medium mb-1">Confirm Password</label>
-              <input 
-                name="confirmPassword" 
-                type="password" 
-                value={formData.confirmPassword} 
-                onChange={handleChange} 
-                placeholder="Repeat your password" 
-                className={`w-full p-3 rounded-lg bg-gray-700 border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition`} 
-              />
-              {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
-            </div>
-
-            {/* Terms Checkbox */}
-            <div className="flex items-center gap-3 pt-2">
-              <input 
-                type="checkbox" 
-                name="agreeTerms" 
-                checked={formData.agreeTerms} 
-                onChange={handleChange} 
-                className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-emerald-500 focus:ring-emerald-500"
-              />
-              <span className="text-sm text-gray-400">
-                I agree to the <Link to="#" className="text-emerald-400 hover:text-emerald-300">Terms</Link> and <Link to="#" className="text-emerald-400 hover:text-emerald-300">Privacy Policy</Link>
-              </span>
-            </div>
-            {errors.agreeTerms && <p className="text-red-400 text-xs">{errors.agreeTerms}</p>}
-
-            {/* Submit Button */}
-            <button 
-              type="submit" 
-              disabled={loading} 
-              className={`w-full py-3 mt-4 rounded-lg font-bold text-white transition duration-200 
-                ${loading ? 'bg-emerald-700 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'}`}
-            >
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </button>
-
-          </form>
-
-          {/* Footer */}
-          <div className="mt-8 text-center text-sm text-gray-500">
-            Already have an account?{' '}
-            <Link to="/signin" className="text-emerald-400 hover:text-emerald-300 font-semibold transition">
-              Sign In
-            </Link>
           </div>
 
+          {/* Confirm Password */}
+          <div>
+            <label className="block text-gray-300 text-xs font-medium mb-1">Confirm Password</label>
+            <div className="relative">
+              <input 
+                name="confirmPassword" 
+                type={showConfirmPassword ? "text" : "password"} 
+                value={formData.confirmPassword} 
+                onChange={handleChange} 
+                className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-emerald-500 transition pr-10"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+              >
+                {showConfirmPassword ? EyeOpen : EyeClosed}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={loading}
+            className={`w-full py-3 rounded-lg font-bold text-white transition duration-200 
+              ${loading ? 'bg-emerald-700 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'}`}
+          >
+            {loading ? 'Creating Account...' : 'Sign Up'}
+          </button>
+
+          {/* Google Button */}
+          <button 
+            type="button"
+            onClick={handleGoogleSignUp}
+            className="w-full py-3 rounded-lg font-bold bg-white text-gray-900 hover:bg-gray-100 transition duration-200 flex items-center justify-center gap-2"
+          >
+            <span className="text-lg">G</span> Sign up with Google
+          </button>
+
+        </form>
+
+        <div className="mt-8 text-center text-sm text-gray-500">
+          Already have an account? <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-semibold transition">Sign In</Link>
         </div>
+
       </div>
     </div>
   )

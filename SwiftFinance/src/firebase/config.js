@@ -1,11 +1,10 @@
-// Import the functions you need from the SDKs you need
+// src/firebase/config.js
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// 1. Add these imports for Authentication (Cheat Sheet Page 5)
+import { getAuth, GoogleAuthProvider } from "firebase/auth"; 
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
+const firebaseConfig =  {
   apiKey: "AIzaSyC32E9f9TXbOctq3IVGFtaR-jo_R5KOKiQ",
   authDomain: "swiftfinance-65919.firebaseapp.com",
   projectId: "swiftfinance-65919",
@@ -16,5 +15,10 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-// Initialize Cloud Firestore and get a reference to the service 
-export const db = getFirestore(app); 
+
+// 2. Export the Auth services so we can use them in the pages
+const db = getFirestore(app);
+const auth = getAuth(app); 
+const googleProvider = new GoogleAuthProvider();
+
+export { db, auth, googleProvider };
